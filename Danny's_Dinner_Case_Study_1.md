@@ -168,6 +168,11 @@ FROM
 WHERE 
     popular_ranking = 1;
 ````
+STEPS:
+- A Common Table Expression (CTE) named customer_popular is created to calculate how many times each customer purchased each item.
+- The CTE joins the sales table with the menu table using product_id, then groups the data by customer_id and product_name to count the number of purchases.
+- In the main query, the DENSE_RANK() window function is used to assign a ranking to each item per customer based on purchase count, in descending order.
+- The outer query filters to only include items with the top rank (popular_ranking = 1) — representing the most frequently purchased item(s) for each customer.
 
 ### 6.Which item was purchased first by the customer after they became a member?
 ````sql
@@ -191,6 +196,12 @@ JOIN
 WHERE 
     order_rank = '1';
 ````
+STEPS:
+- A Common Table Expression (CTE) named temp is created to identify orders made by each customer after their membership start date.
+- The CTE joins the sales table with the members table using customer_id and filters out any orders that occurred on or before the membership join date.
+- The DENSE_RANK() window function is used to rank each customer's qualifying orders based on the order date, with the earliest order assigned rank 1.
+- The main query joins the temp CTE with the menu table on product_id to retrieve the corresponding product name.
+- The final result filters only those rows where the order_rank is 1, representing the first item purchased by each customer after becoming a member.
 
 ### 7.Which item was purchased just before the customer became a member?
 ````sql
@@ -214,6 +225,13 @@ JOIN
 WHERE 
     order_rank = '1';
 ````
+STEPS:
+- A Common Table Expression (CTE) named temp is used to find purchases made by each customer before they became a member.
+- The CTE joins the sales table with the members table on customer_id and filters for orders where order_date is earlier than the join_date.
+- The DENSE_RANK() window function is applied to assign a rank to each qualifying order per customer, ordered by order_date in descending order — so the most recent pre-membership order gets rank 1.
+- The main query joins the temp CTE with the menu table using product_id to retrieve the product name.
+- The final WHERE clause filters for rows where order_rank = 1, giving the last item purchased by each customer before becoming a member.
+
 
 ### 8.What is the total items and amount spent for each member before they became a member?
 ````sql
@@ -232,6 +250,15 @@ WHERE
 GROUP BY sales.customer_id
 ORDER BY sales.customer_id;
 ````
+STEPS:
+- The query joins three tables: sales, members, and menu.
+sales is joined with members on customer_id to get membership details.
+sales is joined with menu on product_id to get item prices.
+- The WHERE clause filters for purchases made before the customer’s membership start date (order_date < join_date).
+- The result is grouped by customer_id to compute per-customer totals.
+- COUNT(order_date) counts how many items (orders) each customer made before becoming a member.
+- SUM(price) adds up the total spending for those items. The final output is ordered by customer_id.
+
 ###  9.If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
 ````sql
 WITH customerPoints AS (SELECT 
@@ -254,10 +281,49 @@ GROUP BY customer_id
 ORDER BY customer_id;
 ````
 
+STEPS:
+- A Common Table Expression (CTE) named customerPoints is created to calculate reward points for each item purchased by every customer.
+- The sales table is joined with the menu table using product_id to get the product name and price.
+- A CASE statement is used to calculate points: For sushi, the points are price × 10 × 2 (double points).For all other items, the points are price × 10.
+- The main query aggregates the total points earned by each customer using SUM(points).
+- The results are grouped by customer_id and ordered in ascending order.
+
 ### 10.In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
+````sql
+WITH dates_cte AS (
+  SELECT 
+    customer_id, 
+      join_date, 
+      join_date + 6 AS valid_date, 
+      DATE_TRUNC(
+        'month', '2021-01-31'::DATE)
+        + interval '1 month' 
+        - interval '1 day' AS last_date
+  FROM members
+)
+
+SELECT 
+  sales.customer_id, 
+  SUM(CASE
+    WHEN menu.product_name = 'sushi' THEN 2 * 10 * menu.price
+    WHEN sales.order_date BETWEEN dates.join_date AND dates.valid_date THEN 2 * 10 * menu.price
+    ELSE 10 * menu.price END) AS points
+FROM sales
+INNER JOIN dates_cte AS dates
+  ON sales.customer_id = dates.customer_id
+  AND dates.join_date <= sales.order_date
+  AND sales.order_date <= dates.last_date
+INNER JOIN menu
+  ON sales.product_id = menu.product_id
+GROUP BY sales.customer_id;
+````
+STEPS:
+- A Common Table Expression (CTE) named dates_cte is created: It defines a valid points period of 7 days (join_date to join_date + 6). It also calculates the last valid date of the dataset as the last day of January 2021 using DATE_TRUNC and interval arithmetic.
+- The main query joins sales with dates_cte on customer_id, filtering sales to be within the membership period and the month. It also joins with menu using product_id to retrieve product prices.
+- A CASE statement is used to assign points: Sushi earns double points always (2 × 10 × price). Other items earn double points if purchased within 7 days of joining. All other purchases earn regular points (10 × price).
+- The points are aggregated (SUM) per customer and grouped accordingly.
 
 
-## Bonus Questions
 ### 11. Recreate the table with: customer_id, order_date, product_name, price, member (Y/N)
 ````sql
 SELECT 
@@ -280,3 +346,7 @@ ORDER BY
     sales.order_date;
 ````
 STEPS:
+- The query joins the sales table with the menu table using product_id to get the product details.
+- A LEFT JOIN is used to bring in join_date from the members table for each customer_id. This ensures that all sales are included even if a customer never became a member.
+- A CASE statement is used to determine the membership status at the time of each purchase: If the order_date is on or after the join_date, the customer is marked as a member ('Y'). Otherwise, they are marked as not a member ('N').
+- The results are ordered by customer_id and order_date to show each customer’s purchase history chronologically with membership status.

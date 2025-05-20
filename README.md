@@ -5,7 +5,7 @@ This repository contains my solutions to the 8 case studies from the #8WeekSQLCh
 A big shoutout to [Data with Danny](https://8weeksqlchallenge.com/getting-started/) for curating these insightful and engaging SQL case studies! 👋🏻
 
 📚 **Table of Contents**
-- [Case Study #1: Danny's Diner](#case-study-1-dannys-diner)
+- [Case Study #1: Danny's Diner](#https://github.com/shrush2107/SQL-Case-Study/blob/main/Danny's_Dinner_Case_Study_1.md)
 - [Case Study #2: Pizza Runner](#case-study-2-pizza-runner)
 - [Case Study #3: Foodie-Fi](#case-study-3-foodie-fi)
 - [Case Study #4: Data Bank](#case-study-4-data-bank)
