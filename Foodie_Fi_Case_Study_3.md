@@ -1,4 +1,23 @@
-# Foodie-Fi SQL Analysis
+# 🍕📺💡 Case Study #3: Foodie-Fi  
+<img src="https://8weeksqlchallenge.com/images/case-study-designs/3.png" alt="Image" width="500" height="520">
+
+> **Note:** All information about this case study is sourced from the official site: [8 Week SQL Challenge – Case Study #3](https://8weeksqlchallenge.com/case-study-3/)
+
+***
+
+## Business Task
+
+Foodie-Fi is a subscription-based video streaming service offering a range of plans from a free trial to basic, pro, and annual packages. The business wants to understand customer behaviors across different subscription plans to improve product offerings and maximize conversions.
+
+You have been given access to a sample database representing customer subscription history and plan metadata.
+
+Danny (the analyst assisting Foodie-Fi) is tasked with uncovering insights about:
+
+- Customer plan conversion timelines  
+- Retention trends  
+- Upgrade and churn behavior  
+- Customer distribution across subscription types  
+- Metrics to support pricing and marketing decisions
 
 
 ## 1. How many customers has Foodie-Fi ever had?
@@ -141,3 +160,81 @@ ORDER BY count_cust DESC;
 - Groups by `plan_name` and counts how many customers moved to each.
 - Calculates the percentage of each path.
 - Helps analyze customer transition behavior after trial.
+
+
+## 8. How many customers have upgraded to an annual plan in 2020?
+
+```sql
+SELECT COUNT(DISTINCT customer_id) AS annual_2020_customers
+FROM foodie_fi.subscriptions
+WHERE plan_id = 3 
+  AND start_date <= '2020-12-31';
+```
+
+### Explanation:
+- `plan_id = 3` represents the **annual plan**.
+- Filters subscriptions that started **on or before** the end of 2020.
+- Counts unique customers who upgraded to annual within that year.
+
+---
+
+## 9. How many days on average does it take for a customer to move to an annual plan from the day they join?
+
+```sql
+SELECT 
+  ROUND(AVG(tannual.start_date - tstart.start_date)) AS avg_days_to_annual
+FROM foodie_fi.subscriptions tstart
+JOIN foodie_fi.subscriptions tannual 
+  ON tstart.customer_id = tannual.customer_id
+WHERE tstart.plan_id = 0   -- Trial
+  AND tannual.plan_id = 3; -- Annual
+```
+
+### Explanation:
+- Measures how long it takes customers to upgrade to the annual plan.
+- Joins subscriptions on `customer_id` to pair each customer's trial and annual records.
+- Calculates the date difference between trial start and annual upgrade.
+- Aggregates the average number of days.
+
+---
+
+## 10. Count of customers who converted to annual within specific days (30-day window breakdown)
+
+```sql
+SELECT 
+  FLOOR((tannual.start_date - tstart.start_date) / 30) AS bucket_number,
+  COUNT(*) AS customer_count
+FROM foodie_fi.subscriptions tstart
+JOIN foodie_fi.subscriptions tannual 
+  ON tstart.customer_id = tannual.customer_id
+WHERE tstart.plan_id = 0   
+  AND tannual.plan_id = 3  
+GROUP BY bucket_number
+ORDER BY bucket_number;
+```
+
+### Explanation:
+- Tracks time taken (in days) for each customer to go from a trial to an annual plan.
+- Helpful to create **bucketed conversion time windows** (e.g., within 7 days, 14 days, 30 days, etc.).
+- Enables time-based segmentation of upgrade behavior.
+
+---
+
+## 11. How many customers downgraded from Pro Monthly to Basic Monthly in 2020?
+
+```sql
+SELECT COUNT(DISTINCT tstart.customer_id) AS downgraded_customers
+FROM foodie_fi.subscriptions tstart
+JOIN foodie_fi.subscriptions tnext 
+  ON tstart.customer_id = tnext.customer_id
+WHERE tstart.plan_id = 2                     
+  AND tnext.plan_id = 1                      
+  AND tnext.start_date > tstart.start_date   
+  AND tnext.start_date <= '2020-12-31';
+```
+
+### Explanation:
+- Identifies customers who **downgraded** their plan.
+- `plan_id = 2` is Pro Monthly; `plan_id = 1` is Basic Monthly.
+- Checks that the downgrade occurred **after** the upgrade (`tnext.start_date > tstart.start_date`).
+- Restricts downgrades to those made in **2020** only.
