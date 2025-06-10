@@ -210,3 +210,76 @@ FROM temp
 ORDER BY runner_id;
 ```
 
+## C.Ingredient Optimisation
+
+### 1️⃣ What are the standard ingredients for each pizza?
+
+```sql
+WITH split_toppings AS (
+  SELECT
+    pizza_id,
+    REGEXP_SPLIT_TO_TABLE(TRIM(toppings), '[,\s]+')::INTEGER AS topping_id
+  FROM pizza_recipes
+  WHERE toppings IS NOT NULL AND toppings <> ''
+)
+SELECT
+  pn.pizza_name,
+  STRING_AGG(pt.topping_name, ', ') AS toppings
+FROM split_toppings st
+JOIN pizza_names pn ON st.pizza_id = pn.pizza_id
+JOIN pizza_toppings pt ON st.topping_id = pt.topping_id
+GROUP BY pn.pizza_name;
+```
+Notes:
+-- normalizing the table is a better way to go with.
+-- string_agg(for readability) vs array_agg(for further processing)
+-- REGEXP_SPLIT_TO_TABLE -> doesn't work on null or ""
+
+### 2️⃣ What was the most commonly added extra?
+
+```sql
+WITH expanded_temp AS (
+  SELECT
+    order_id,
+    customer_id,
+    pizza_id,
+    order_time,
+    REGEXP_SPLIT_TO_TABLE(TRIM(extras), '[,\s]+')::INTEGER AS extra_id
+  FROM customer_orders
+  WHERE extras IS NOT NULL AND extras <> ''
+)
+SELECT
+  extra_id,
+  COUNT(extra_id) AS topping_count,
+  pt.topping_name
+FROM expanded_temp et
+JOIN pizza_toppings pt ON et.extra_id = pt.topping_id
+GROUP BY extra_id, pt.topping_name
+ORDER BY topping_count DESC
+LIMIT 1;
+```
+
+
+### 3️⃣ What was the most common exclusion?
+
+```sql
+WITH expanded_temp AS (
+  SELECT
+    order_id,
+    customer_id,
+    pizza_id,
+    order_time,
+    REGEXP_SPLIT_TO_TABLE(TRIM(exclusions), '[,\s]+')::INTEGER AS exclusion_id
+  FROM customer_orders
+  WHERE exclusions IS NOT NULL AND exclusions <> ''
+)
+SELECT
+  exclusion_id,
+  COUNT(exclusion_id) AS topping_count,
+  pt.topping_name
+FROM expanded_temp et
+JOIN pizza_toppings pt ON et.exclusion_id = pt.topping_id
+GROUP BY exclusion_id, pt.topping_name
+ORDER BY topping_count DESC
+LIMIT 1;
+```
