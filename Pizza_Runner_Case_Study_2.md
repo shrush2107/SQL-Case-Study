@@ -1,5 +1,26 @@
 
-# 🍕 Pizza Runner - SQL Analysis
+# 🍕 Case Study #2: Pizza Runner  
+
+<img src="https://8weeksqlchallenge.com/images/case-study-designs/2.png" alt="Data Bank" width="500" height="520">
+
+**Note:** All information about this case study is sourced from the official site: [8 Week SQL Challenge – Case Study #2](https://8weeksqlchallenge.com/case-study-2/)
+
+---
+
+## Business Task  
+Danny and his friends decided to create a pizza delivery service called **Pizza Runner**. While Danny was initially handling all the deliveries by himself, demand quickly grew, prompting him to recruit additional runners to help with order fulfillment.
+
+Now that the business is growing, Danny wants to better understand the operational aspects of Pizza Runner. This includes analyzing delivery performance, runner engagement, and customer ordering behaviors. He needs insights that will help him optimize delivery processes, identify bottlenecks, and improve customer satisfaction.
+
+Danny has shared a subset of the data due to privacy reasons, but he believes it contains enough relevant examples for you to write SQL queries that can help him gain deeper insights into the business. He also hopes to generate clean and readable summary datasets that his team can access without writing complex queries.
+
+- How many successful orders were delivered?
+- What are the average delivery times?
+- How frequently are runners completing deliveries?
+- What are the most popular pizza combinations?
+
+These insights will play a key role in streamlining operations, tracking performance, and potentially launching loyalty offers or promotions.
+
 
 ## A. Pizza Metrics
 
@@ -283,3 +304,88 @@ GROUP BY exclusion_id, pt.topping_name
 ORDER BY topping_count DESC
 LIMIT 1;
 ```
+
+## D. Pricing
+
+### 1️⃣ If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
+
+```sql
+SELECT 
+    SUM(CASE 
+        WHEN pn.pizza_name = 'Meatlovers' THEN 12
+        ELSE 10
+    END) AS total_revenue
+FROM customer_orders c
+JOIN runner_orders r ON c.order_id = r.order_id
+JOIN pizza_names pn ON pn.pizza_id = c.pizza_id
+WHERE r.cancellation IS NULL;
+```
+
+### 2️⃣ What if there was an additional $1 charge for any pizza extras?
+
+``` sql 
+WITH base_revenue AS (
+    SELECT 
+        CASE 
+            WHEN pn.pizza_name = 'Meatlovers' THEN 12
+            ELSE 10
+        END AS price
+    FROM customer_orders c
+    JOIN runner_orders r ON c.order_id = r.order_id
+    JOIN pizza_names pn ON pn.pizza_id = c.pizza_id
+    WHERE r.cancellation IS NULL
+),
+extra_toppings AS (
+    SELECT 
+        REGEXP_SPLIT_TO_TABLE(TRIM(extras), '[,\s]+') AS topping_id
+    FROM customer_orders c
+    JOIN runner_orders r ON c.order_id = r.order_id
+    WHERE r.cancellation IS NULL 
+      AND extras IS NOT NULL 
+      AND extras <> ''
+)
+SELECT 
+    (SELECT SUM(price) FROM base_revenue) + COUNT(*) AS total_revenue
+FROM extra_toppings;
+```
+
+### 3️⃣ If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
+
+``` sql
+WITH temp AS (
+    SELECT
+        r.order_id,
+        r.distance,
+        r.runner_id,
+        r.pickup_time,
+        r.duration,
+        r.cancellation,
+        c.customer_id,
+        pn.pizza_name,
+        distance * 0.3 AS delivery_fee,
+        CASE 
+            WHEN pn.pizza_name = 'Meatlovers' THEN 12
+            ELSE 10
+        END AS pizza_price
+    FROM customer_orders c
+    JOIN runner_orders r ON c.order_id = r.order_id
+    JOIN pizza_names pn ON pn.pizza_id = c.pizza_id
+    WHERE r.cancellation IS NULL
+),
+
+temp2 AS (
+    SELECT 
+        order_id,
+        MAX(delivery_fee) AS per_order_fee
+    FROM temp
+    GROUP BY order_id
+)
+
+SELECT 
+    (SELECT SUM(pizza_price) FROM temp) - 
+    (SELECT SUM(per_order_fee) FROM temp2) AS net_profit;
+
+```
+
+
+
