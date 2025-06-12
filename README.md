@@ -4,15 +4,6 @@ This repository contains my solutions to the 8 case studies from the #8WeekSQLCh
 
 A big shoutout to [Data with Danny](https://8weeksqlchallenge.com/getting-started/) for curating these insightful and engaging SQL case studies! 👋🏻
 
-📚 **Table of Contents**
-- [Case Study #1: Danny's Diner](https://github.com/shrush2107/SQL-Case-Study/blob/main/Danny's_Dinner_Case_Study_1.md)
-- [Case Study #2: Pizza Runner](#case-study-2-pizza-runner)
-- [Case Study #3: Foodie-Fi](#case-study-3-foodie-fi)
-- [Case Study #4: Data Bank](#case-study-4-data-bank)
-- [Case Study #5: Data Mart](#case-study-5-data-mart)
-- [Case Study #6: Clique Bait](#case-study-6-clique-bait)
-- [Case Study #7: Balanced Tree](#case-study-7-balanced-tree)
-- [Case Study #8: Fresh Segments](#case-study-8-fresh-segments)
 
 **Topics Covered:**
 - Where filters and ordering data
